@@ -92,7 +92,7 @@ let
       [ "${secretType.path}" != "${cfg.secretsDir}/${secretType.name}" ] && ln -sfT "${cfg.secretsDir}/${secretType.name}" "${secretType.path}"
     ''}
   '';
-  testServiceAccountToken = ''
+  testServiceAccountToken = if (cfg.mode == "service-account") then ''
     if [ ! -f "${cfg.environmentFile}" ]; then
       echo "[opnix] ERROR: environment file '${cfg.environmentFile}' does not exist!"
       exit 1
@@ -108,7 +108,7 @@ let
       echo "[opnix] WARN: environment file '${cfg.environmentFile}' has incorrect permissions: $SA_TOKEN_FILE_PERMS"
       echo "[opnix] WARN: environment file '${cfg.environmentFile}' should have permissions 400 or 600"
     fi
-  '';
+  '' else "";
   installSecrets = builtins.concatStringsSep "\n" ([
     "echo '[opnix] provisioning secrets...'"
     createOpConfigDir

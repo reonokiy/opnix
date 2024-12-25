@@ -18,8 +18,17 @@ in {
       default = "${pkgs._1password-cli}/bin/op";
       description = "The 1Password CLI `op` executable to use";
     };
+    mode = mkOption {
+      type = types.enum [ "service-account" "desktop" ];
+      default = "service-account";
+      description = ''
+        The authentication mode to use with the 1Password CLI. 
+        `service-account` uses 1Password service account tokens,
+        `desktop` intergrates with the 1Password desktop app.
+      '';
+    };
     environmentFile = mkOption {
-      type = types.str;
+      type = types.nullOr types.str;
       description = ''
         Path to a environment file which contains your service account token. Format should be `OP_SERVICE_ACCOUNT_TOKEN="{ your token here }"`. This is used to authorize the 1Password CLI in the systemd job.'';
     };
@@ -78,7 +87,9 @@ in {
 
         serviceConfig = {
           Type = "oneshot";
-          EnvironmentFile = cfg.environmentFile;
+          EnvironmentFile = lib.mkIf (
+              cfg.mode == "service-account" && cfg.environmentFile != null
+            ) cfg.environmentFile;
           RemainAfterExit = true;
         };
 
@@ -91,8 +102,16 @@ in {
         text = ''
           ${scripts.setOpnixGeneration}
           (( _opnix_generation > 1 )) && {
-          source ${cfg.environmentFile}
-          export OP_SERVICE_ACCOUNT_TOKEN
+
+          ${
+            if cfg.mode == "service-account" && cfg.environmentFile != null
+            then ''
+              source ${cfg.environmentFile}
+              export OP_SERVICE_ACCOUNT_TOKEN
+            ''
+            else ""
+          }
+
           ${opnixScript}
           }
         '';
